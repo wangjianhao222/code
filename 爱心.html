@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realistic Heart Effect</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrollbars */
+            background-color: #000; /* Black background */
+            width: 100vw;
+            height: 100vh;
+            position: relative; /* Needed for absolute positioning */
+        }
+
+        /* CSS for the heart shape */
+        .heart {
+            position: absolute;
+            bottom: 0; /* Start at the bottom */
+            left: 50%; /* Initial horizontal position (will be randomized by JS) */
+            transform: translateX(-50%); /* Center the heart initially */
+            width: 20px; /* Base size */
+            height: 20px; /* Base size */
+            background-color: #e53935; /* Red color */
+            transform: rotate(-45deg); /* Rotate to form heart shape */
+            pointer-events: none; /* Allow clicking through hearts */
+            user-select: none; /* Prevent selection */
+            opacity: 0; /* Start invisible */
+        }
+
+        /* Create the two bumps of the heart */
+        .heart::before,
+        .heart::after {
+            content: '';
+            position: absolute;
+            width: 20px; /* Base size */
+            height: 20px; /* Base size */
+            background-color: #e53935; /* Red color */
+            border-radius: 50%; /* Make them round */
+        }
+
+        .heart::before {
+            top: -10px; /* Position the top-left bump */
+            left: 0;
+        }
+
+        .heart::after {
+            top: 0;
+            left: 10px; /* Position the top-right bump */
+        }
+    </style>
+</head>
+<body>
+    <div id="effectContainer">
+        </div>
+
+    <script>
+        const effectContainer = document.getElementById('effectContainer');
+        const numberOfHearts = 50; // Number of hearts
+        const hearts = []; // Array to hold heart elements
+
+        // Function to create a single heart element
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('heart');
+            effectContainer.appendChild(heart);
+
+            // Set random initial properties
+            heart.size = Math.random() * 15 + 10; // Random size between 10 and 25
+            heart.speed = Math.random() * 1.5 + 0.5; // Random speed between 0.5 and 2
+            heart.x = Math.random() * window.innerWidth; // Random horizontal position
+            heart.y = window.innerHeight; // Start at the bottom
+            heart.opacity = 0; // Start invisible
+            heart.rotation = Math.random() * 360; // Random initial rotation
+
+            // Apply initial styles
+            heart.style.width = heart.size + 'px';
+            heart.style.height = heart.size + 'px';
+            heart.style.left = heart.x + 'px';
+            heart.style.top = heart.y + 'px';
+            heart.style.opacity = heart.opacity;
+            heart.style.transform = `translateX(-50%) rotate(${heart.rotation}deg)`;
+
+            // Adjust pseudo-element sizes based on the main heart size
+            heart.style.setProperty('--heart-size', heart.size + 'px');
+            heart.style.setProperty('--bump-offset', heart.size / 2 + 'px');
+
+
+             // Update pseudo-element styles dynamically
+            heart.style.setProperty('--before-top', -heart.size / 2 + 'px');
+            heart.style.setProperty('--after-left', heart.size / 2 + 'px');
+
+
+            return heart;
+        }
+
+         // Update the CSS rules for pseudo-elements to use custom properties
+        const styleSheet = document.styleSheets[0];
+        let heartRule;
+        let beforeRule;
+        let afterRule;
+
+        for (let i = 0; i < styleSheet.cssRules.length; i++) {
+            const rule = styleSheet.cssRules[i];
+            if (rule.selectorText === '.heart') {
+                heartRule = rule;
+            } else if (rule.selectorText === '.heart::before') {
+                beforeRule = rule;
+            } else if (rule.selectorText === '.heart::after') {
+                afterRule = rule;
+            }
+        }
+
+        if (beforeRule && afterRule) {
+            beforeRule.style.setProperty('width', 'var(--heart-size)');
+            beforeRule.style.setProperty('height', 'var(--heart-size)');
+            beforeRule.style.setProperty('border-radius', '50%');
+            beforeRule.style.setProperty('top', 'var(--before-top)');
+            beforeRule.style.setProperty('left', '0');
+
+            afterRule.style.setProperty('width', 'var(--heart-size)');
+            afterRule.style.setProperty('height', 'var(--heart-size)');
+            afterRule.style.setProperty('border-radius', '50%');
+            afterRule.style.setProperty('top', '0');
+            afterRule.style.setProperty('left', 'var(--after-left)');
+        }
+
+
+        // Create initial hearts
+        for (let i = 0; i < numberOfHearts; i++) {
+            hearts.push(createHeart());
+        }
+
+        // Animation loop
+        function animate() {
+            hearts.forEach(heart => {
+                // Move heart upwards
+                heart.y -= heart.speed;
+                heart.style.top = heart.y + 'px';
+
+                // Fade in as it rises from the bottom
+                if (heart.y < window.innerHeight * 0.9) {
+                     heart.opacity += 0.005; // Gradually increase opacity
+                     if (heart.opacity > 1) heart.opacity = 1;
+                     heart.style.opacity = heart.opacity;
+                }
+
+
+                // Fade out as it reaches the top
+                if (heart.y < window.innerHeight * 0.3) {
+                    heart.opacity -= 0.01; // Gradually decrease opacity
+                    if (heart.opacity < 0) heart.opacity = 0;
+                     heart.style.opacity = heart.opacity;
+                }
+
+
+                // Optional: Add slight horizontal drift
+                heart.x += Math.sin(heart.y * 0.01) * 0.5;
+                heart.style.left = heart.x + 'px';
+
+                // Optional: Add slight rotation
+                heart.rotation += 0.1;
+                heart.style.transform = `translateX(-50%) rotate(${heart.rotation}deg)`;
+
+                // If heart is off-screen, reset its properties
+                if (heart.y < -heart.size) {
+                    heart.size = Math.random() * 15 + 10; // New random size
+                    heart.speed = Math.random() * 1.5 + 0.5; // New random speed
+                    heart.x = Math.random() * window.innerWidth; // New random horizontal position
+                    heart.y = window.innerHeight + heart.size; // Reset to bottom, slightly below viewport
+                    heart.opacity = 0; // Start invisible again
+                    heart.rotation = Math.random() * 360; // New random initial rotation
+
+                     // Apply new size and position
+                    heart.style.width = heart.size + 'px';
+                    heart.style.height = heart.size + 'px';
+                    heart.style.left = heart.x + 'px';
+                    heart.style.top = heart.y + 'px';
+                    heart.style.opacity = heart.opacity;
+                     heart.style.transform = `translateX(-50%) rotate(${heart.rotation}deg)`;
+
+                     // Update pseudo-element sizes based on the new heart size
+                    heart.style.setProperty('--heart-size', heart.size + 'px');
+                    heart.style.setProperty('--bump-offset', heart.size / 2 + 'px');
+                     heart.style.setProperty('--before-top', -heart.size / 2 + 'px');
+                    heart.style.setProperty('--after-left', heart.size / 2 + 'px');
+                }
+            });
+
+            // Request next frame
+            requestAnimationFrame(animate);
+        }
+
+        // Start the animation
+        animate();
+
+        // Optional: Adjust heart positions on window resize (basic repositioning)
+        window.addEventListener('resize', () => {
+             hearts.forEach(heart => {
+                 // Reset horizontal position randomly
+                 heart.x = Math.random() * window.innerWidth;
+                 heart.style.left = heart.x + 'px';
+
+                 // If the heart was off-screen vertically, reset it to the bottom
+                 if (heart.y < -heart.size || heart.y > window.innerHeight) {
+                     heart.y = window.innerHeight + heart.size;
+                     heart.style.top = heart.y + 'px';
+                     heart.opacity = 0; // Make it invisible until it rises again
+                     heart.style.opacity = heart.opacity;
+                 }
+             });
+        });
+
+    </script>
+</body>
+</html>
